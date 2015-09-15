@@ -1,0 +1,95 @@
+# lds-bde-loader Configuration
+#
+# All commented values are the application default
+#
+
+### Path where BDE job files are stored
+job_path: {job_path}
+
+### Enable debugging behaviours
+debug: false
+
+koordinates:
+    ### API token
+    api_token: {api_token}
+
+    ### Endpoint
+    endpoint: {endpoint}
+
+
+### If you're running on a BDE Processor, you need to uncomment and fill in
+### this section.
+# bde:
+#     ### BDE Processor database access details. Needs "bde_user" role
+#     database:
+#         host: localhost
+#         port: 5432
+#         database: bde_db
+#         user: lds_bde_ro
+#         password: null
+
+#     ### Mapping between BDE Database tables & Koordinates Layer IDs
+#     tables:
+#         ### LayerID : schema.table
+#         805: lds.primary_parcels
+
+#     ### Publish Groups to create
+#     ### These are started in the order below
+#     groups:
+#         - name: lds1                            # Group name
+#           schedule: "FREQ=WEEKLY;BYWEEKDAY=SA"  # RFC2445
+#           layers:
+#               ### Koordinates Layer IDs
+#               - 805
+
+logging:
+    ### Python logging.dictConfig structure
+    version: 1
+    disable_existing_loggers: false
+    formatters:
+        console:
+            format: "%(levelname)s [%(name)s]: %(message)s"
+        logfile:
+            format: "%(asctime)s %(name)s[%(process)d] %(module)s:%(lineno)d %(message)s"
+
+    handlers:
+        console:
+            class: logging.StreamHandler
+            # This is modified by --verbose/--quiet
+            level: WARN
+            formatter: console
+            stream: ext://sys.stderr
+
+        ### Uncomment to enable file logging
+        # logfile:
+        #     class: logging.handlers.RotatingFileHandler
+        #     level: INFO
+        #     formatter: logfile
+        #     filename: /var/log/lds-bde-loader/lds-bde-loader.log
+        #     maxBytes: 10485760  # 10MB
+        #     backupCount: 30
+        #     encoding: utf8
+
+        ### Uncomment to enable Email notifications
+        # email:
+        #     class: ldsbde.core.util.EmailLogHandler
+        #     mailhost: localhost
+        #     subject: "LDS BDE Update - {endpoint} "
+        #     fromaddr: lds-bde-loader@localhost
+        #     toaddrs: 
+        #         - user@example.com
+
+    loggers:
+        notify:
+            propagate: no
+
+        email:
+            ### Uncomment to enable Email notifications
+            #handlers: [email]
+            propagate: no
+
+    root:
+        level: DEBUG
+        ### Swap to enable file logging
+        #handlers: [console, logfile]
+        handlers: [console]
