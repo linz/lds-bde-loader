@@ -404,14 +404,14 @@ class BDEProcessor(object):
         if layer.latest_version != layer.published_version:
             self.log.warn("Layer %s has a draft version already (%s)...", layer_id, layer.latest_version)
             layer = layer.get_draft_version()
-            if layer.version.reference == ref:
+            if layer.supplier_reference == ref:
                 self.log.warn("Skipping update of Layer %s (%s) - already importing/imported for this job", layer.id, layer.title)
                 return layer
             else:
-                layer.reference = ref
+                layer.supplier_reference = ref
                 layer.save()
         else:
-            layer.reference = ref
+            layer.supplier_reference = ref
             layer = layer.create_draft_version()
 
         # TODO: use config.tables to check/set/update datasources for this layer to the correct table
@@ -572,7 +572,7 @@ class BDEProcessor(object):
             table,
             layerversion_id,
             layer.data.source_revision,
-            layer.version.reference
+            layer.supplier_reference
         )
         if idx == 0:
             raise KoordinatesStateError("No previous version found (LV=%s L=%s)" % (layerversion_id, layer_id))
@@ -584,7 +584,7 @@ class BDEProcessor(object):
                 table,
                 prev_version_id,
                 prev_version.data.source_revision,
-                prev_version.version.reference
+                prev_version.supplier_reference
             )
 
         # Check feature counts
