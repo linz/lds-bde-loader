@@ -189,13 +189,14 @@ class BDEProcessor(object):
 
         return (counts['I'], counts['U'], counts['D'])
 
-    def update_job(self, job):
+    def update_job(self, job, job_state=None, verify_count_only=False):
         timestamp = timestamp_local()
         upload = self.get_upload(job.id)
         job.bde_upload = upload.serialize()
         self.log.info("Job %s", job.id)
 
-        if job.state in (Job.STATE_NEW, Job.STATE_BDE_RUNNING):
+        job_state = job_state or job.state
+        if job_state in (Job.STATE_NEW, Job.STATE_BDE_RUNNING):
             # Update the Job state based on the Upload state
             prev_state = job.state
             if upload.status == Upload.STATUS_ACTIVE:
@@ -214,7 +215,7 @@ class BDEProcessor(object):
             if prev_state != job.state:
                 self.notify.info("Job %s:\n%s -> %s", job.id, prev_state, job.state)
 
-        if job.state == Job.STATE_IMPORTING:
+        if job_state == Job.STATE_IMPORTING:
             # Check on state of publish groups
             counts = defaultdict(int)
             num_groups = len(job.groups)
@@ -225,7 +226,7 @@ class BDEProcessor(object):
                 if publish.state == 'waiting-for-approval':
                     # QA Time
                     try:
-                        self.verify_job(job, group)
+                        self.verify_job(job, group, count_only=verify_count_only)
                     except ConsistencyError as e:
                         self.log.warn("Job %s: Group %s: BDE Consistency Errors: %s", job.id, name, e.args)
                         job.state = Job.STATE_ERRORS
@@ -535,13 +536,13 @@ class BDEProcessor(object):
 
         self.email.error(body, extra={'subject': subject})
 
-    def verify_job(self, job, group):
+    def verify_job(self, job, group, count_only=False):
         errors = []
         num_layers = len(group['layer_versions'])
         for i, (layer_id, layerversion_id) in enumerate(sorted(group['layer_versions'].items())):
             table = self.config_bde['tables'][layer_id]
             try:
-                self.verify_change_counts(job, layer_id, layerversion_id, table)
+                self.verify_change_counts(job, layer_id, layerversion_id, table, count_only=count_only)
             except ConsistencyError as e:
                 errors.append(e)
             self.log.info("Verified %s/%s...", i, num_layers)
@@ -549,7 +550,7 @@ class BDEProcessor(object):
         if errors:
             raise ConsistencyError(errors)
 
-    def verify_change_counts(self, job, layer_id, layerversion_id, table):
+    def verify_change_counts(self, job, layer_id, layerversion_id, table, count_only=False):
         """ Verify the change counts """
         layer = self.koordinates_client.layers.get_version(layer_id, layerversion_id)
 
@@ -597,6 +598,10 @@ class BDEProcessor(object):
 
         if prev_version.data.source_revision is None:
             self.log.info("Previous BDE revision is None, skipping change-count checks")
+            return
+
+        if count_only:
+            self.log.info("Skipping insert/update/delete counts")
             return
 
         # Check change counts

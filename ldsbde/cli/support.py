@@ -142,16 +142,18 @@ def cron_monitor(ctx, bde):
 @with_config
 @with_bde
 @singleton
+@click.option("--job-state", help="Treat as if the current job state is this", type=click.Choice([Job.STATE_NEW, Job.STATE_BDE_RUNNING, Job.STATE_BDE_ERROR, Job.STATE_BDE_FINISHED, Job.STATE_IMPORTING]))
+@click.option("--verify-count-only", is_flag=True, help="When verifying changes only examine total feature counts")
 @with_job
 @click.pass_context
-def check_import(ctx, job, bde):
+def check_import(ctx, job_state, verify_count_only, job, bde):
     """
     Check and progress import status.
 
     Progressing it as appropriate (eg. approving publishes, updating state, etc)
     """
-    L.info("check-import job_id=%s", job.id)
-    bde.update_job(job)
+    L.info("check-import job_id=%s job_state=%s verify_count_only=%s", job.id, job_state, verify_count_only)
+    bde.update_job(job, job_state=job_state, verify_count_only=verify_count_only)
     job.save()
     click.echo(str(job))
 
