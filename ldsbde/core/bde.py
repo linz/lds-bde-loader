@@ -230,9 +230,8 @@ class BDEProcessor(object):
                     except ConsistencyError as e:
                         self.log.warn("Job %s: Group %s: BDE Consistency Errors: %s", job.id, name, e.args)
                         job.state = Job.STATE_ERRORS
-                        error_message = "\n".join(["Group %s: BDE Consistency Errors - Cancelling Publish" % name] + map(str, e.args))
+                        error_message = "\n".join(["Group %s: BDE Consistency Errors" % name] + map(str, e.args))
                         self.notify.error("Job %s:\n%s", job.id, error_message)
-                        publish.cancel()
                     else:
                         self._publish_approve(publish)
                         publish = self.koordinates_client.publishing.get(publish.id)
@@ -441,6 +440,7 @@ class BDEProcessor(object):
 
     def abandon_update(self, job):
         self.log.info("Abandoning Job %s", job.id)
+        n_cancelled = 0
         if job.state == Job.STATE_IMPORTING:
             for publish_group in job.groups:
                 publish_id = publish_group.id
@@ -448,6 +448,7 @@ class BDEProcessor(object):
                 try:
                     self.log.info("Cancelling Publish %s", publish_id)
                     publish.cancel()
+                    n_cancelled += 1
                 except koordinates.Conflict as e:
                     if self.debug:
                         raise
@@ -456,6 +457,7 @@ class BDEProcessor(object):
 
         job.state = Job.STATE_ABANDONED
         self.update_job(job)
+        self.notify.error("Job %s: Abandoned. Cancelled %d publishes", job.id, n_cancelled)
         return job
 
     def email_success(self, job):
