@@ -360,6 +360,10 @@ class BDEProcessor(object):
         ref = self.get_reference(job.id)
         self.log.info("job %s: group %s: reference=%s", job.id, group_name, ref)
 
+        if group_state.get('publish_id', None):
+            self.log.info("job %s: group %s: existing-publish %s", job.id, group_name, group_state['publish_id'])
+            return
+
         pub_ref = "%s:%s" % (ref, group_name)
         publish_kwargs = {
             'publish_strategy': 'manual',
@@ -367,28 +371,24 @@ class BDEProcessor(object):
             'reference': pub_ref,
         }
 
-        try:
-            publish = self.koordinates_client.publishing.list(reference=pub_ref)[0]
-            self.log.info("job %s: group %s: existing publish %s", job.id, group_name, publish.id)
-        except koordinates.NotFound:
-            publish = koordinates.Publish(**publish_kwargs)
+        publish = koordinates.Publish(**publish_kwargs)
 
-            # iterate through each layer to reimport
-            group_state.setdefault('layer_versions', {})
-            num_layers = len(group['layers'])
-            for i, layer_id in enumerate(group['layers']):
-                self.log.info("layer [%s/%s]: %s", (i + 1), num_layers, layer_id)
-                layer_version = self._start_layer(ref, layer_id)
-                # add the draft version to the publish
-                self.log.info("layer %s: new-version %s", layer_id, layer_version.version.id)
-                group_state['layer_versions'][layer_id] = layer_version.version.id
-                job.save()
-                publish.add_layer_item(layer_version)
+        # iterate through each layer to reimport
+        group_state.setdefault('layer_versions', {})
+        num_layers = len(group['layers'])
+        for i, layer_id in enumerate(group['layers']):
+            self.log.info("layer [%s/%s]: %s", (i + 1), num_layers, layer_id)
+            layer_version = self._start_layer(ref, layer_id)
+            # add the draft version to the publish
+            self.log.info("layer %s: new-version %s", layer_id, layer_version.version.id)
+            group_state['layer_versions'][layer_id] = layer_version.version.id
+            job.save()
+            publish.add_layer_item(layer_version)
 
-            # commit the publish
-            # TODO: error handling
-            publish = self.koordinates_client.publishing.create(publish)
-            self.log.info("job %s: group %s: publish %s", job.id, group_name, publish.id)
+        # commit the publish
+        # TODO: error handling
+        publish = self.koordinates_client.publishing.create(publish)
+        self.log.info("job %s: group %s: publish %s", job.id, group_name, publish.id)
 
         group_state.update({
             'publish_id': publish.id,
