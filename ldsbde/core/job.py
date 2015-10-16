@@ -63,6 +63,7 @@ class Job(object):
             'has_import_errors': self.has_import_errors,
             'has_publish_errors': self.has_publish_errors,
             'zendesk_ticket': self.zendesk_ticket,
+            'changes': self.changes,
         }
 
 
@@ -73,7 +74,7 @@ class Job(object):
         self.version = data['version']
         self.created_at = data['created_at']
         self.state = data['state']
-        self.changes = []
+        self.changes = data.get('changes', [])
         self.has_import_errors = data['has_import_errors']
         self.has_publish_errors = data['has_publish_errors']
         # optional
