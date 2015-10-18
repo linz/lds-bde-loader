@@ -64,6 +64,10 @@ class Upload(object):
         }
 
 class BDEProcessor(object):
+    VERIFY_ALL = 'all'
+    VERIFY_COUNTS = 'counts'
+    VERIFY_NONE = 'none'
+
     class BDEError(exc.Error):
         pass
 
@@ -189,7 +193,7 @@ class BDEProcessor(object):
 
         return (counts['I'], counts['U'], counts['D'])
 
-    def update_job(self, job, job_state=None, verify_count_only=False):
+    def update_job(self, job, job_state=None, verify=VERIFY_ALL):
         timestamp = timestamp_local()
         upload = self.get_upload(job.id)
         job.bde_upload = upload.serialize()
@@ -224,15 +228,23 @@ class BDEProcessor(object):
                 publish = self.koordinates_client.publishing.get(group['publish_id'])
 
                 if publish.state == 'waiting-for-approval':
-                    # QA Time
-                    try:
-                        self.verify_job(job, group, count_only=verify_count_only)
-                    except ConsistencyError as e:
-                        self.log.warn("Job %s: Group %s: BDE Consistency Errors: %s", job.id, name, e.args)
-                        job.state = Job.STATE_ERRORS
-                        error_message = "\n".join(["Group %s: BDE Consistency Errors" % name] + map(str, e.args))
-                        self.notify.error("Job %s:\n%s", job.id, error_message)
+                    do_pub = False
+                    if verify == self.VERIFY_NONE:
+                        self.log.info("Job %s: Group %s: Skipping BDE consistency check", job.id, name)
+                        do_pub = True
                     else:
+                        # QA Time
+                        try:
+                            self.verify_job(job, group, count_only=(verify == self.VERIFY_COUNTS))
+                            do_pub = True
+                        except ConsistencyError as e:
+                            self.log.warn("Job %s: Group %s: BDE Consistency Errors: %s", job.id, name, e.args)
+                            job.state = Job.STATE_ERRORS
+                            error_message = "\n".join(["Group %s: BDE Consistency Errors" % name] + map(str, e.args))
+                            self.notify.error("Job %s:\n%s", job.id, error_message)
+                            continue
+
+                    if do_pub:
                         self._publish_approve(publish)
                         publish = self.koordinates_client.publishing.get(publish.id)
                         self.notify.info("Job %s: Group %s: BDE consistency check passed - publishing now", job.id, name, extra={'color':'good'})

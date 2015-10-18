@@ -7,6 +7,7 @@ import click
 
 from ldsbde.cli.utils import with_config, with_bde, with_job, singleton, load_job, save_job
 from ldsbde.core.job import Job
+from ldsbde.core.bde import BDEProcessor
 
 
 L = logging.getLogger("ldsbde.support")
@@ -142,18 +143,18 @@ def cron_monitor(ctx, bde):
 @with_config
 @with_bde
 @singleton
-@click.option("--job-state", help="Treat as if the current job state is this", type=click.Choice([Job.STATE_NEW, Job.STATE_BDE_RUNNING, Job.STATE_BDE_ERROR, Job.STATE_BDE_FINISHED, Job.STATE_IMPORTING]))
-@click.option("--verify-count-only", is_flag=True, help="When verifying changes only examine total feature counts")
+@click.option("--job-state", help="Treat as if the current job state as this", type=click.Choice([Job.STATE_NEW, Job.STATE_BDE_RUNNING, Job.STATE_BDE_ERROR, Job.STATE_BDE_FINISHED, Job.STATE_IMPORTING]))
+@click.option("--verify", help="Layer verification level", type=click.Choice([BDEProcessor.VERIFY_ALL, BDEProcessor.VERIFY_COUNTS, BDEProcessor.VERIFY_NONE]), default=BDEProcessor.VERIFY_ALL)
 @with_job
 @click.pass_context
-def check_import(ctx, job_state, verify_count_only, job, bde):
+def check_import(ctx, job_state, verify, job, bde):
     """
     Check and progress import status.
 
     Progressing it as appropriate (eg. approving publishes, updating state, etc)
     """
-    L.info("check-import job_id=%s job_state=%s verify_count_only=%s", job.id, job_state, verify_count_only)
-    bde.update_job(job, job_state=job_state, verify_count_only=verify_count_only)
+    L.info("check-import job_id=%s job_state=%s verify=%s", job.id, job_state, verify)
+    bde.update_job(job, job_state=job_state, verify=verify)
     job.save()
     click.echo(str(job))
 
