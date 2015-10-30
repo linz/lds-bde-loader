@@ -75,7 +75,7 @@ logging:
         #     class: ldsbde.core.util.EmailLogHandler
         #     mailhost: localhost
         #     subject: "LDS BDE Update - {endpoint} "
-        #     fromaddr: lds-bde-loader@localhost
+        #     fromaddr: lds-bde-loader@host.example.com
         #     toaddrs: 
         #         - user@example.com
 

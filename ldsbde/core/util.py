@@ -15,20 +15,21 @@ class SlackLogHandler(logging.Handler):
     """
     logging Handler that sends messages to a Slack channel
 
-    Parameters settable via extras= parameter:
+    Parameters settable via extra= parameter:
     * color: good, warning, danger, hex-value -- sets the highlight colour
     * alert: True -- adds @channel to the messages
     """
-    def __init__(self, api_key, channel, username='lds-bde-loader', icon_emoji=':inbox_tray:', *args, **kwargs):
+    def __init__(self, api_key, channel, username='lds-bde-loader', icon_emoji=':inbox_tray:', alert_errors=False, *args, **kwargs):
         super(SlackLogHandler, self).__init__(*args, **kwargs)
         self.slack = Slacker(api_key)
         self.channel = channel
         self.username = username
         self.icon_emoji = icon_emoji
+        self.alert_errors = alert_errors
 
     def emit(self, record):
         params = {
-            'text': '{}'.format(record.getMessage()),
+            'text': u'{}'.format(record.getMessage()),
         }
 
         # colour
@@ -40,8 +41,11 @@ class SlackLogHandler(logging.Handler):
             params['color'] = 'warning'
 
         # @channel alerting
-        if getattr(record, "alert", False):
-            params['text'] = "<!channel> " + params['text']
+        alert_channel = getattr(record, "alert", None)
+        if alert_channel is None and self.alert_errors and record.levelno >= logging.ERROR:
+            alert_channel = True
+        if alert_channel:
+            params['text'] = u"<!channel> " + params['text']
 
         self.slack.chat.post_message(
             channel=self.channel,

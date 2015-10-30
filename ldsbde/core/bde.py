@@ -217,7 +217,7 @@ class BDEProcessor(object):
                 self.log.info("Updating Job state to %s (Upload=%s)", job.state, upload.status)
 
             if prev_state != job.state:
-                self.notify.info("Job %s:\n%s -> %s", job.id, prev_state, job.state)
+                self.notify.info("Job %s: %s -> %s", job.id, prev_state, job.state)
 
         if job_state == Job.STATE_IMPORTING:
             # Check on state of publish groups
@@ -321,6 +321,8 @@ class BDEProcessor(object):
             else:
                 self.log.warn("BDE Upload isn't complete yet (%s) -- ignoring", upload.status_display)
 
+        if job.state != Job.STATE_BDE_FINISHED:
+            self.notify.info("Job %s: %s -> bde-finished. Upload: %s", job.id, job.state, upload.status_display)
         job.state = Job.STATE_BDE_FINISHED
         job.bde_upload = upload.serialize()
         job.save()
