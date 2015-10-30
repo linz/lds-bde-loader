@@ -37,7 +37,7 @@ koordinates:
 #     ### These are started in the order below
 #     groups:
 #         - name: lds1                            # Group name
-#           schedule: "FREQ=WEEKLY;BYWEEKDAY=SA"  # RFC2445
+#           schedule: "FREQ=WEEKLY;BYWEEKDAY=SA"  # RFC2445. yes=always, no=never
 #           layers:
 #               ### Koordinates Layer IDs
 #               - 805

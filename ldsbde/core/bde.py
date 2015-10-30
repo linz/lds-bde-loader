@@ -299,8 +299,10 @@ class BDEProcessor(object):
         return ref
 
     def check_schedule(self, schedule):
-        if not schedule or schedule == "*":
+        if schedule == "*" or schedule == True or schedule is None:
             return True
+        elif not schedule:  # False
+            return False
 
         today = datetime.date.today()
         rule = dateutil.rrule.rrulestr(schedule, dtstart=today)
