@@ -50,9 +50,10 @@ def show(ctx, job):
 @with_bde
 @singleton(wait=False)
 @click.option("--ignore-bde-state", is_flag=True, help="Ignore the BDE Processor Job state")
+@click.option("--ignore-schedule", is_flag=True, help="Ignore the configured schedules")
 @with_job
 @click.pass_context
-def continue_import(ctx, ignore_bde_state, job, bde):
+def continue_import(ctx, ignore_bde_state, ignore_schedule, job, bde):
     """
     Continue the import-starting stage.
 
@@ -63,7 +64,11 @@ def continue_import(ctx, ignore_bde_state, job, bde):
     if job.state not in (Job.STATE_BDE_FINISHED, Job.STATE_ERRORS):
         raise click.ClickException("Invalid job state for continue-import: %s" % job.state)
 
-    bde.start_update(job, check_bde_state=(not ignore_bde_state))
+    bde.start_update(
+        job,
+        check_bde_state=(not ignore_bde_state),
+        ignore_schedule=ignore_schedule
+    )
     job.save()
     click.echo(str(job))
 
