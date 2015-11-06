@@ -48,7 +48,7 @@ def show(ctx, job):
 @click.command('continue-import')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=False)
 @click.option("--ignore-bde-state", is_flag=True, help="Ignore the BDE Processor Job state")
 @with_job
 @click.pass_context
@@ -71,7 +71,7 @@ def continue_import(ctx, ignore_bde_state, job, bde):
 @click.command('start-import')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=False)
 @click.option("--ignore-bde-state", is_flag=True, help="Ignore the BDE Processor Job state")
 @click.option("--ignore-schedule", is_flag=True, help="Ignore the configured schedules")
 @click.argument('job_id', type=int, required=True)
@@ -113,7 +113,7 @@ def start_import(ctx, ignore_bde_state, ignore_schedule, job_id, bde):
 @click.command('cron-monitor')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=False)
 @click.pass_context
 def cron_monitor(ctx, bde):
     """
@@ -142,7 +142,7 @@ def cron_monitor(ctx, bde):
 @click.command('check-import')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=False)
 @click.option("--job-state", help="Treat as if the current job state as this", type=click.Choice([Job.STATE_NEW, Job.STATE_BDE_RUNNING, Job.STATE_BDE_ERROR, Job.STATE_BDE_FINISHED, Job.STATE_IMPORTING]))
 @click.option("--verify", help="Layer verification level", type=click.Choice([BDEProcessor.VERIFY_ALL, BDEProcessor.VERIFY_COUNTS, BDEProcessor.VERIFY_NONE]), default=BDEProcessor.VERIFY_ALL)
 @with_job
@@ -162,7 +162,7 @@ def check_import(ctx, job_state, verify, job, bde):
 @click.command('abandon')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=False)
 @with_job
 @click.pass_context
 def abandon(ctx, job, bde):
@@ -180,7 +180,7 @@ def abandon(ctx, job, bde):
 @click.command('error-email')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=False)
 @with_job
 @click.pass_context
 def error_email(ctx, job, bde):

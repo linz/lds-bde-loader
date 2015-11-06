@@ -15,7 +15,7 @@ L = logging.getLogger("ldsbde.process")
 @with_config
 @with_bde
 @click.argument('job_id', type=int, required=True)
-@singleton
+@singleton(wait=True)
 @click.pass_context
 def start(ctx, job_id, bde):
     """
@@ -49,7 +49,7 @@ def start(ctx, job_id, bde):
 @click.command('process-finish')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=True)
 @with_job
 @click.pass_context
 def finish(ctx, job, bde):
@@ -71,7 +71,7 @@ def finish(ctx, job, bde):
 @click.command('process-error')
 @with_config
 @with_bde
-@singleton
+@singleton(wait=True)
 @with_job
 @click.pass_context
 def error(ctx, job, bde):

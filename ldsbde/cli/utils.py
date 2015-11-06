@@ -54,22 +54,32 @@ def with_config(func):
     return update_wrapper(wrapper, func)
 
 
-def singleton(func):
-    """ Prevent multiple lds-bde-loader processes fighting each other. """
-    @click.pass_context
-    def wrapper(ctx, *args, **kwargs):
-        # check we're the only @singleton command running
-        pid_file = os.path.join(tempfile.gettempdir(), 'lds-bde-loader.pid')
-        ctx.pid_fp = open(pid_file, 'w')
-        try:
-            fcntl.lockf(ctx.pid_fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
-            # another instance is running
-            ctx.pid_fp.close()
-            raise click.ClickException("Another instance of 'lds-bde-loader process' is running")
+def singleton(wait):
+    """
+    Prevent multiple lds-bde-loader processes fighting each other.
+    wait should be a boolean whether to block/wait for the other process or not.
+    """
+    def wrap(func):
+        @click.pass_context
+        def wrapper(ctx, *args, **kwargs):
+            # check we're the only @singleton command running
+            pid_file = os.path.join(tempfile.gettempdir(), 'lds-bde-loader.lock')
 
-        return ctx.invoke(func, *args, **kwargs)
-    return update_wrapper(wrapper, func)
+            flags = fcntl.LOCK_EX
+            if not wait:
+                flags |= fcntl.LOCK_NB
+
+            ctx.pid_fp = open(pid_file, 'w')
+            try:
+                fcntl.lockf(ctx.pid_fp, flags)
+            except IOError:
+                # another instance is running
+                ctx.pid_fp.close()
+                raise click.ClickException("Another instance of 'lds-bde-loader process' is running")
+
+            return ctx.invoke(func, *args, **kwargs)
+        return update_wrapper(wrapper, func)
+    return wrap
 
 
 def with_bde(func):
