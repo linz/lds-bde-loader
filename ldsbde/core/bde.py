@@ -365,6 +365,8 @@ class BDEProcessor(object):
                     job.save()
                     self.notify.error("Job %s: Errors creating ALL LDS update groups: %s", job.id, errors)
                 raise BDEProcessor.BDEError(errors)
+            else:
+                self.notify.info("Job %s: LDS update started successfully.", job.id)
 
         job.save()
         return job
