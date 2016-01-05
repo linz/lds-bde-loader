@@ -18,12 +18,9 @@ L = logging.getLogger("ldsbde")
 
 def with_config(func):
     """ Populate ctx.config with the parsed contents of the config file """
-    @click.option('--config-file', type=click.Path(), help="Config file location")
-    @click.pass_context
-    def wrapper(ctx, *args, **kwargs):
-        config_file = kwargs.pop('config_file', None)
-        if config_file:
-            paths=[config_file]
+    def callback(ctx, param, value):
+        if value:
+            paths=[value]
         else:
             paths = [
                 os.path.join(click.get_app_dir('lds-bde-loader', force_posix=True), 'config.yml'),
@@ -50,8 +47,17 @@ def with_config(func):
                     handler.setLevel(log_level)
                     break
 
-        return ctx.invoke(func, *args, **kwargs)
-    return update_wrapper(wrapper, func)
+        return None
+
+    f = click.option(
+        '--config-file',
+        type=click.Path(),
+        help="Config file location",
+        is_eager=True,  # do first
+        expose_value=False,  # don't pass parameter through to real command
+        callback=callback
+    )
+    return f(func)
 
 
 def singleton(wait):
