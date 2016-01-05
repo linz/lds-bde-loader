@@ -5,7 +5,7 @@ import os
 
 import click
 
-from ldsbde.cli.utils import with_config, with_bde, with_job, singleton, load_job, save_job
+from ldsbde.cli.utils import with_config, with_bde, with_job, singleton, load_job, save_job, find_jobs
 from ldsbde.core.job import Job
 from ldsbde.core.bde import BDEProcessor
 
@@ -119,29 +119,42 @@ def start_import(ctx, ignore_bde_state, ignore_schedule, job_id, bde):
 @with_config
 @with_bde
 @singleton(wait=False)
+@click.option("--max-age", metavar="DAYS", help="Also check jobs from previous N days", type=click.IntRange(min=0), default=0)
 @click.pass_context
-def cron_monitor(ctx, bde):
+def cron_monitor(ctx, max_age, bde):
     """
-    [Internal] Cron: Check and progress imports
+    [Internal] Cron: Check and progress current imports
 
     \b
     Configure via:
-        */15 * * * * /path/to/lds-bde-loader/bin/lds-bde-loader cron-monitor
+        */15 * * * * /path/to/lds-bde-loader/bin/lds-bde-loader cron-monitor --max-age=7
     """
-    L.info("cron-monitor")
+    L.info("cron-monitor max-age=%s", max_age)
+
     upload = bde.get_latest_upload()
     if not upload:
         L.warn("No latest BDE Processor Upload")
         return
 
+    # Check the latest job
     try:
         job = load_job(ctx, upload.id)
     except Job.NotFound:
         L.warn("No matching Job found for Upload %s", upload.id)
-        return
+    else:
+        bde.update_job(job)
+        job.save()
 
-    bde.update_job(job)
-    job.save()
+    if max_age:
+        # Check older jobs
+        for job in find_jobs(ctx, max_age=max_age):
+            if job.id == upload.id:
+                # we've already done this one above
+                continue
+
+            L.info("Checking older job: %s", job.id)
+            bde.update_job(job)
+            job.save()
 
 
 @click.command('check-import')

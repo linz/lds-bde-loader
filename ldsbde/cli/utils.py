@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+import datetime
 import fcntl
 import logging
 import logging.config
 import os
+import re
 import tempfile
 from functools import update_wrapper, partial
 
@@ -126,6 +128,34 @@ def load_job(ctx, job_id):
         if not data:
             raise Job.NotFound("Job %s (%s) -- empty" % (job_id, job_file))
         return Job.parse(data, job_id=job_id, save_func=partial(save_job, ctx))
+
+
+def find_jobs(ctx, max_age=None):
+    """
+    Find multiple Jobs from on-disk yaml files (N.yml).
+    Returns a generator for Job objects in newest-first order.
+    max_age: restrict the maximum age in days of jobs to return (based on Job.created_at).
+    """
+    # find the existing Job IDs and YAML files
+    job_ids = []
+    for fn in os.listdir(ctx.config["job_path"]):
+        m = re.match(r'([0-9]+)\.yml$', fn)
+        if m:
+            job_ids.append(int(m.group(1)))
+    job_ids.sort(reverse=True)
+
+    oldest = None
+    if max_age:
+        oldest = datetime.date.today() - datetime.timedelta(days=max_age)
+
+    for job_id in job_ids:
+        job = load_job(ctx, job_id)
+
+        if oldest and (job.created_at.date() < oldest):
+            # stop, we'll only see older jobs from here
+            break
+
+        yield job
 
 
 def with_job(func):
